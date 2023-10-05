@@ -30,7 +30,7 @@ Downloading https://raw.githubusercontent.com/stanfordnlp/stanza-resources/main/
 2023-10-05 14:23:29 INFO: Loading: depparse
 2023-10-05 14:23:29 INFO: Done loading processors!
 >>> sentence = "Nemáme  proto potíže se získáváním trhu pro své výrobní odpady."
->>> results = sm.match(sentence, False)
+>>> results = sm.match(sentence)
 >>> print(results)
 ([{'canonical_connective': 'proto', 'surface_form': 'proto', 'offsets': [(8, 13)], 'senses': ['reason-result', 'pragmatic reason-result', 'equivalence']}], False)
 ```
