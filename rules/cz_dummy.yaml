@@ -1,0 +1,41 @@
+že:
+  skip:
+    - že
+i:
+  skip:
+    - i
+to:
+  skip:
+  - to
+s:
+  skip:
+    - s
+než:
+  prev_token_one_of:
+    - ","
+    - jinak
+tak:
+  canonical_only:
+    - True
+  prev_token_one_of:
+    - ","
+a:
+  is_finite_verb_conjunction:
+    - True
+až:
+  is_finite_verb_conjunction:
+    - True
+jak:
+  is_finite_verb_conjunction:
+    - True
+nebo:
+  is_finite_verb_conjunction:
+    - True
+ani:
+  is_finite_verb_conjunction:
+    - True
+jen:
+  canonical_only:
+    - True
+  prev_token_one_of:
+    - ","

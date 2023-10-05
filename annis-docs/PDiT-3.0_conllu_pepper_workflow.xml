@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<pepper-job id="puc0hpus" version="1.0">
+
+<importer name="CoNLLImporter" path=".\PDiT-3.0_conllu">
+	<property key="pepper.after.addSLayer">UDPipe</property>
+	<property key="annotation.name">label=func</property>
+</importer>
+
+<!-- TODO: replace salt:pos layer with more relevant label (probably using a manipulator? https://corpus-tools.org/pepper/userGuide.html)-->
+
+<exporter name="ANNISExporter" path=".\PDiT-3.0_annis_corpus">
+<property key="clobber.visualisation">true</property> 
+<property key="corpusName">PDiT-3.0_1k</property>
+</exporter>
+	
+</pepper-job>
