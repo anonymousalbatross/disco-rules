@@ -121,6 +121,8 @@ class StringMatcher:
                             # TODO: test valid_match for spacy pipeline (only tested for stanza for now)
                             if not self.valid_match(c.canonical, (m.start(), m.end())):
                                 continue
+                        if self.discard_match((m.start(), m.end())):
+                            continue
                         if strict and c.has_ambinfo():
                             if not c.is_ambiguous():
                                 annotations.append(d)
@@ -170,12 +172,54 @@ class StringMatcher:
         annotations = [v for k, v in unannotations.items()]
         return sorted(annotations, key=lambda x: x['offsets'][0][0]), ambinfo_missing_warning
 
+    def discard_match(self, offsets):
+
+        try:
+            _id = self.offsets2tokeninfo[offsets]['id'][0]
+            sid = self.offsets2tokeninfo[offsets]['sid']
+            nexttoken = [self.offsets2tokeninfo[x] for x in self.offsets2tokeninfo if
+                         self.offsets2tokeninfo[x]['id'][0] == _id + 1 and
+                         self.offsets2tokeninfo[x]['sid'] == sid]
+            if nexttoken:
+                nttext = nexttoken[0]['text']
+                if nttext in ['.', '?', '!']:  # sentence-final punctuation
+                    return True
+            remaining_senttokens = [self.offsets2tokeninfo[x] for x in self.offsets2tokeninfo
+                                    if self.offsets2tokeninfo[x]['sid'] == sid and self.offsets2tokeninfo[x]['id'][0] > _id]
+            #if not [x for x in remaining_senttokens if x['upostag'] == 'VERB']:
+            #    return True
+            if [x for x in self.offsets2tokeninfo[offsets]['text'][1:] if x.isupper()]: # probably an abbreviation. Might be a bit dangerous multi-ling though
+                return True
+        except:
+            pass  # TODO: figure out why there can be a KeyError in the code above!
+
     def valid_match(self, canonical, offsets):
         for elem in self.rules[canonical]:
             # TODO: get rid of hardcoding rule names/labels. Move to some config file instead!
             if elem == 'skip':
-                if self.offsets2tokeninfo[offsets]['lemma'] in self.rules[canonical][elem]:
+                if self.offsets2tokeninfo[offsets]['lemma'] in self.rules[canonical][elem]:  # single words
                     return False
+                else:  # multi-words
+                    for skip in self.rules[canonical][elem]:
+                        for ie, subelem in enumerate(skip.split()):
+                            if subelem == self.offsets2tokeninfo[offsets]['lemma']:
+                                conn_pos = [i for i, it in enumerate(self.offsets2tokeninfo.items()) if it[0] == offsets][0]
+                                left_neighbours = []
+                                for j in range(ie, 0, -1):
+                                    left_neighbours.append(list(self.offsets2tokeninfo.items())[conn_pos - j][1]['lemma'])
+                                right_neighbours = []
+                                for j in range(ie, len(skip.split())):
+                                    right_neighbours.append(list(self.offsets2tokeninfo.items())[conn_pos + j][1]['lemma'])
+                                expected_left_neighbours = skip.split()[:ie]
+                                expected_right_neighbours = skip.split()[ie+1:]
+                                left_match = False
+                                if expected_left_neighbours and left_neighbours == expected_left_neighbours:
+                                    left_match = True
+                                right_match = False
+                                if expected_right_neighbours and right_neighbours == expected_right_neighbours:
+                                    right_match = True
+                                if left_match and right_match:
+                                    return False
             elif elem == 'prev_token_one_of':
                 if 'canonical_only' in self.rules[canonical]:
                     if self.offsets2tokeninfo[offsets]['text'].lower() != canonical:
@@ -187,6 +231,8 @@ class StringMatcher:
                 if left_neighbour:
                     if left_neighbour['lemma'] in self.rules[canonical][elem]:
                         return True
+                if not left_neighbour and ',' in self.rules[canonical][elem]:  # also letting sentence-initials through
+                    return True
             elif elem == 'is_finite_verb_conjunction':
                 if self.stanza_pipeline:
                     if self.is_finite_verb_conjunction_stanza(offsets):
@@ -207,10 +253,13 @@ class StringMatcher:
             # if there are no left_ancestors, it's probably sentence-initial, in which case it's more likely to be a conn? (might work  exactly the other way around for Arabic...)
             elif not left_ancestors and [x for x in right_ancestors if x['upostag'] == 'VERB']:
                 return True
-            #if [x for x in left_ancestors if 'VerbForm' in x['feats'] and x['feats']['VerbForm'] == 'Fin'] and \
-                    #[x for x in right_ancestors if 'VerbForm' in x['feats'] and x['feats']['VerbForm'] == 'Fin']:
-                #return True
-
+            """
+            if [x for x in left_ancestors if 'VerbForm' in x['feats'] and x['feats']['VerbForm'] == 'Fin'] and \
+                    [x for x in right_ancestors if 'VerbForm' in x['feats'] and x['feats']['VerbForm'] == 'Fin']:
+                return True
+            elif not left_ancestors and [x for x in right_ancestors if 'VerbForm' in x['feats'] and x['feats']['VerbForm'] == 'Fin']:
+                return True
+            """
 
     @staticmethod
     def get_stanza_ancestors(item, offsets2tokeninfo, ancestors):
@@ -290,7 +339,7 @@ def main():
     ll = LexLoader.LexiconLoader()
     connectives = ll.load_lexicon('LREC24_experiments\czedlex1.0-basic.xml')
     sm = StringMatcher('czech', connectives, 'rules/cz_dummy.yaml')
-    sentence = "Petr a Marie. Petr jí okurku a Marie pije pivo."
+    sentence = "Petr a Marie. Petr jí okurku tak, aby Marie pije pivo."
     #connectives = ll.load_lexicon('tests/discodict.xml')
     #sm = StringMatcher('nl', connectives)
     #sentence = 'Een voorbeeldzin, gewoon omdat het kan.'
